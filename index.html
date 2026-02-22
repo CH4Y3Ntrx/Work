@@ -1,9 +1,34 @@
+<?php
+session_start();
+
+// จัดการการล้างข้อมูล
+if (isset($_POST['reset'])) {
+    $_SESSION['tree_data'] = [];
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit();
+}
+
+// จัดการการเพิ่มข้อมูล
+if (isset($_POST['node_value']) && $_POST['node_value'] !== "") {
+    $val = intval($_POST['node_value']);
+    if (!isset($_SESSION['tree_data'])) {
+        $_SESSION['tree_data'] = [];
+    }
+    $_SESSION['tree_data'][] = $val;
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit();
+}
+
+// เตรียมข้อมูลส่งให้ JavaScript
+$tree_nodes = isset($_SESSION['tree_data']) ? json_encode($_SESSION['tree_data']) : "[]";
+?>
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modern Binary Search Tree Visualizer</title>
+    <title>PHP Binary Search Tree Visualizer</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -38,11 +63,7 @@
             text-align: center;
         }
 
-        h1 {
-            color: #4338ca;
-            margin-bottom: 25px;
-            font-weight: 500;
-        }
+        h1 { color: #4338ca; margin-bottom: 25px; font-weight: 500; }
 
         .controls {
             display: flex;
@@ -57,14 +78,8 @@
             border: 2px solid #e2e8f0;
             border-radius: 12px;
             outline: none;
-            transition: 0.3s;
-            font-size: 16px;
             width: 120px;
-        }
-
-        input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+            font-size: 16px;
         }
 
         button {
@@ -77,25 +92,9 @@
             font-size: 16px;
         }
 
-        .btn-insert {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .btn-insert:hover {
-            background: #4f46e5;
-            transform: translateY(-2px);
-        }
-
-        .btn-reset {
-            background: #ef4444;
-            color: white;
-        }
-
-        .btn-reset:hover {
-            background: #dc2626;
-            transform: translateY(-2px);
-        }
+        .btn-insert { background: var(--primary-color); color: white; }
+        .btn-reset { background: #ef4444; color: white; }
+        button:hover { transform: translateY(-2px); opacity: 0.9; }
 
         #tree-container {
             width: 100%;
@@ -123,50 +122,24 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
 
-        .traversal-card h3 {
-            margin: 0 0 5px 0;
-            font-size: 14px;
-            color: #64748b;
-            text-transform: uppercase;
-        }
+        .traversal-card h3 { margin: 0 0 5px 0; font-size: 14px; color: #64748b; text-transform: uppercase; }
+        .traversal-card p { margin: 0; font-weight: 500; color: #1e293b; word-break: break-all; }
 
-        .traversal-card p {
-            margin: 0;
-            font-weight: 500;
-            color: #1e293b;
-            word-break: break-all;
-        }
-
-        circle {
-            fill: white;
-            stroke: var(--primary-color);
-            stroke-width: 3px;
-        }
-
-        text {
-            font-family: 'Kanit', sans-serif;
-            font-size: 14px;
-            font-weight: 500;
-            text-anchor: middle;
-            dominant-baseline: middle;
-        }
-
-        line {
-            stroke: var(--line-color);
-            stroke-width: 2px;
-        }
+        circle { fill: white; stroke: var(--primary-color); stroke-width: 3px; }
+        text { font-family: 'Kanit', sans-serif; font-size: 14px; font-weight: 500; text-anchor: middle; dominant-baseline: middle; }
+        line { stroke: var(--line-color); stroke-width: 2px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Binary Search Tree Visualizer</h1>
+    <h1>Binary Search Tree (PHP Version)</h1>
     
-    <div class="controls">
-        <input type="number" id="node-value" placeholder="ระบุตัวเลข">
-        <button class="btn-insert" onclick="insertNode()">เพิ่มข้อมูล</button>
-        <button class="btn-reset" onclick="resetTree()">ล้างข้อมูล</button>
-    </div>
+    <form method="POST" class="controls">
+        <input type="number" name="node_value" placeholder="ระบุตัวเลข" required autofocus>
+        <button type="submit" class="btn-insert">เพิ่มข้อมูล</button>
+        <button type="submit" name="reset" class="btn-reset">ล้างข้อมูล</button>
+    </form>
 
     <div id="tree-container">
         <svg id="tree-svg" width="1000" height="400"></svg>
@@ -174,21 +147,24 @@
 
     <div class="traversal-results">
         <div class="traversal-card">
-            <h3>Preorder (Root → L → R)</h3>
+            <h3>Preorder</h3>
             <p id="preorder">-</p>
         </div>
         <div class="traversal-card">
-            <h3>Inorder (L → Root → R)</h3>
+            <h3>Inorder</h3>
             <p id="inorder">-</p>
         </div>
         <div class="traversal-card">
-            <h3>Postorder (L → R → Root)</h3>
+            <h3>Postorder</h3>
             <p id="postorder">-</p>
         </div>
     </div>
 </div>
 
 <script>
+    // รับข้อมูลจาก PHP
+    const initialData = <?php echo $tree_nodes; ?>;
+
     class Node {
         constructor(value) {
             this.value = value;
@@ -197,115 +173,4 @@
         }
     }
 
-    let root = null;
-    const svg = document.getElementById('tree-svg');
-
-    function insertNode() {
-        const val = parseInt(document.getElementById('node-value').value);
-        if (isNaN(val)) return;
-
-        const newNode = new Node(val);
-        if (!root) {
-            root = newNode;
-        } else {
-            addNode(root, newNode);
-        }
-        
-        document.getElementById('node-value').value = '';
-        updateVisualization();
-    }
-
-    function addNode(node, newNode) {
-        if (newNode.value < node.value) {
-            if (!node.left) node.left = newNode;
-            else addNode(node.left, newNode);
-        } else {
-            if (!node.right) node.right = newNode;
-            else addNode(node.right, newNode);
-        }
-    }
-
-    function resetTree() {
-        root = null;
-        updateVisualization();
-    }
-
-    function updateVisualization() {
-        svg.innerHTML = '';
-        if (root) {
-            drawTree(root, 500, 50, 200);
-        }
-        updateTraversals();
-    }
-
-    function drawTree(node, x, y, spacing) {
-        if (node.left) {
-            const lx = x - spacing;
-            const ly = y + 70;
-            drawLine(x, y, lx, ly);
-            drawTree(node.left, lx, ly, spacing / 1.8);
-        }
-        if (node.right) {
-            const rx = x + spacing;
-            const ry = y + 70;
-            drawLine(x, y, rx, ry);
-            drawTree(node.right, rx, ry, spacing / 1.8);
-        }
-        drawNode(x, y, node.value);
-    }
-
-    function drawNode(x, y, val) {
-        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        
-        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("cx", x);
-        circle.setAttribute("cy", y);
-        circle.setAttribute("r", 20);
-        
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.setAttribute("x", x);
-        text.setAttribute("y", y);
-        text.textContent = val;
-
-        g.appendChild(circle);
-        g.appendChild(text);
-        svg.appendChild(g);
-    }
-
-    function drawLine(x1, y1, x2, y2) {
-        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line.setAttribute("x1", x1);
-        line.setAttribute("y1", y1);
-        line.setAttribute("x2", x2);
-        line.setAttribute("y2", y2);
-        svg.appendChild(line);
-    }
-
-    // Traversal Logic
-    function updateTraversals() {
-        let pre = [], ino = [], post = [];
-        function traverse(node) {
-            if (!node) return;
-            pre.push(node.value);
-            traverse(node.left);
-            ino.push(node.value);
-            traverse(node.right);
-            post.push(node.value);
-        }
-        // Simplified traversal display logic
-        let preRes = [], inoRes = [], postRes = [];
-        
-        function getPre(n) { if(!n) return; preRes.push(n.value); getPre(n.left); getPre(n.right); }
-        function getIn(n) { if(!n) return; getIn(n.left); inoRes.push(n.value); getIn(n.right); }
-        function getPost(n) { if(!n) return; getPost(n.left); getPost(n.right); postRes.push(n.value); }
-
-        getPre(root); getIn(root); getPost(root);
-
-        document.getElementById('preorder').innerText = preRes.join(' → ') || '-';
-        document.getElementById('inorder').innerText = inoRes.join(' → ') || '-';
-        document.getElementById('postorder').innerText = postRes.join(' → ') || '-';
-    }
-</script>
-
-</body>
-</html>
+    let
